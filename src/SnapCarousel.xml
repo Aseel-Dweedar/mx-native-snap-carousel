@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<widget id="mendix.snapcarousel.SnapCarousel" pluginWidget="true" needsEntityContext="true" offlineCapable="true"
+        supportedPlatform="Native"
+        xmlns="http://www.mendix.com/widget/1.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.mendix.com/widget/1.0/ ../node_modules/mendix/custom_widget.xsd">
+    <name>Snap Carousel</name>
+    <description>Snap Carousel and card stack</description>
+    <icon/>
+    <properties>
+        <propertyGroup caption="General">
+            <propertyGroup caption="Data and Action">
+                <property key="dataType" type="enumeration" defaultValue="dynamic">
+                    <caption>Data Type</caption>
+                    <description />
+                    <enumerationValues>
+                        <enumerationValue key="dynamic">Dynamic</enumerationValue>
+                        <enumerationValue key="static">Static</enumerationValue>
+                    </enumerationValues>
+                </property>
+                <property key="staticItems" type="object" isList="true">
+                    <caption>Content list</caption>
+                    <description />
+                    <properties>
+                        <propertyGroup caption="Content list group">
+                            <property key="contentName" type="textTemplate" required="true">
+                                <caption>Content Name</caption>
+                                <description />
+                            </property>
+                            <property key="staticContent" type="widgets" required="true">
+                                <caption>Content</caption>
+                                <description />
+                            </property>
+                            <property key="staticAction" type="action" required="false">
+                            	<caption>Action</caption>
+                                <description>Callback fired when the new active item has been determined</description>
+                            </property>
+                        </propertyGroup>
+                    </properties>
+                </property>
+                <property key="data" type="datasource" isList="true" required="true">
+                	<caption>Data source</caption>
+                	<description/>
+                </property>
+                <property key="action" type="action" dataSource="data" required="false">
+                	<caption>Action</caption>
+                    <description>Callback fired when the new active item has been determined</description>
+                </property>
+                <property key="content" type="widgets" dataSource="data" required="true">
+                	<caption>Content</caption>
+                	<description/>
+                </property>
+                <property key="scrollEnabled" type="expression" required="false">
+                	<caption>Scroll Enabled</caption>
+                	<description/>
+                    <returnType type="Boolean" />
+                </property>
+                <property key="firstItem" type="expression" required="false">
+                	<caption>First Item Index</caption>
+                	<description/>
+                    <returnType type="Integer" />
+                </property>
+            </propertyGroup>
+            <propertyGroup caption="Behavior">
+                <property key="layout" type="enumeration" defaultValue="default">
+	            	<caption>Carousel Layout</caption>
+	            	<description/>
+	            	<enumerationValues>
+	            		<enumerationValue key="default">Default</enumerationValue>
+	            		<enumerationValue key="stack">Stack</enumerationValue>
+	            		<enumerationValue key="tinder">Tinder</enumerationValue>
+	            	</enumerationValues>
+	            </property>
+                <property key="pagination" type="boolean" defaultValue="true">
+                	<caption>Pagination</caption>
+                	<description/>
+                </property>
+                <property key="paginationColor" type="string" defaultValue="#3b4045" required='false'>
+                	<caption>Pagination Hex Color</caption>
+                	<description/>
+                </property>
+                <property key="autoplay" type="boolean" defaultValue="false">
+                	<caption>Autopaly</caption>
+                	<description/>
+                </property>
+                <property key="autoplayDelay" type="integer" defaultValue="1000">
+                	<caption>Autoplay Delay</caption>
+                	<description>Delay before enabling autoplay on startup and after releasing the touch in 'ms', from (1000 - 300000)</description>
+                </property>
+                <property key="autoplayInterval" type="integer" defaultValue="3000">
+                	<caption>Autoplay Interval</caption>
+                	<description>Delay in ms until navigating to the next item in 'ms', from (1000 - 300000)</description>
+                </property>
+                <property key="lockScrollWhileSnapping" type="boolean" defaultValue="false">
+                	<caption>Lock Scroll While Snapping</caption>
+                	<description/>
+                </property>
+                <property key="activeSlideOffset" type="integer" defaultValue="20">
+                	<caption>Active Slide Offset</caption>
+                	<description>From slider's center, minimum slide distance to be scrolled before being set to active.</description>
+                </property>
+            </propertyGroup>
+        </propertyGroup>
+        <propertyGroup caption="Style and Animation">
+            <property key="carouselWidth" type="enumeration" defaultValue="full">
+	        	<caption>Carousel Width</caption>
+	        	<description/>
+	        	<enumerationValues>
+	        		<enumerationValue key="full">Full width</enumerationValue>
+	        		<enumerationValue key="custom">Custom width</enumerationValue>
+	        	</enumerationValues>
+	        </property>
+            <property key="customWidth" type="integer" defaultValue="300">
+            	<caption>Custom width</caption>
+            	<description>Width in pixels of the carousel itself</description>
+            </property>
+            <property key="carouselPadding" type="integer" defaultValue="20">
+            	<caption>Carousel Padding</caption>
+            	<description>Padding left and right of the Carousel in pixels</description>
+            </property>
+            <property key="layoutCardOffset" type="integer" defaultValue="10">
+            	<caption>Layout Card Offset</caption>
+            	<description>The default card offset in both 'stack' and 'tinder' layouts</description>
+            </property>
+            <property key="inactiveSlideOpacity" type="decimal" defaultValue="0.7">
+            	<caption>Inactive Slide Opacity</caption>
+            	<description>Value of the opacity effect applied to inactive slides, between (0-1)</description>
+            </property>
+            <property key="inactiveSlideScale" type="decimal" defaultValue="0.9">
+            	<caption>Inactive Slide Scale</caption>
+            	<description>Value of the 'scale' transform applied to inactive slides, between (0-1)</description>
+            </property>
+        </propertyGroup>
+    </properties>
+</widget>
