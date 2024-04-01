@@ -7,6 +7,7 @@ React Native Snap Carousel widget is a mobile widget for building ***static*** a
 * Static or dynamic content.
 * Support adding action when item has been determined.
 * Auto Play.
+* Infinite loop.
 * Hide/Show Pagination.
 * determined carousel and items Width.
 * Enabled or disabled carousel.
