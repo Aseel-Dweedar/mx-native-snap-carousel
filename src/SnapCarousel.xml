@@ -78,6 +78,10 @@
                 	<caption>Pagination Hex Color</caption>
                 	<description/>
                 </property>
+                <property key="loop" type="boolean" defaultValue="true">
+                	<caption>Infinite Loop</caption>
+                	<description/>
+                </property>
                 <property key="autoplay" type="boolean" defaultValue="false">
                 	<caption>Autopaly</caption>
                 	<description/>
