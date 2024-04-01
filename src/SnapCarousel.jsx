@@ -1,11 +1,13 @@
-import { createElement, useEffect, useState, useCallback } from "react";
+import { createElement, useEffect, useState, useCallback, useRef } from "react";
 import { Dimensions, View, Text, StyleSheet } from "react-native";
 import Carousel from "react-native-snap-carousel";
+import { useSwipe } from "./components/useSwipe";
 const { width: windowWidth, height: windowHeight } = Dimensions.get("window");
 
 // hex color regex validation, support for 3-character HEX codes (no transparent supported)
 // This means that instead of matching exactly 6 characters, it will match exactly 3 characters, but only 1 or 2 times. Allowing "ABC" and "AABBCC", but not "ABCD"
 const hexColorValidate = /^#([0-9A-F]{3}){1,2}$/i;
+let loopTimeout = null;
 
 export function SnapCarousel({
     dataType,
@@ -18,6 +20,7 @@ export function SnapCarousel({
     layout,
     pagination,
     paginationColor,
+    loop,
     autoplay,
     autoplayDelay,
     autoplayInterval,
@@ -35,6 +38,38 @@ export function SnapCarousel({
     const [activeItem, setActiveItem] = useState(1);
     const [calcCarouselWidth, setCalcCarouselWidth] = useState(0);
     const [calcCarouselHeight, setCalcCarouselHeight] = useState(0);
+    const [itemHeight, setItemHeight] = useState(0);
+
+    const _carousel = useRef();
+
+    /*****************************************************************************/
+    /**************************** Manual Infante Loop ****************************/
+    /*****************************************************************************/
+    const { onTouchStart, onTouchEnd } = useSwipe(onSwipeLeft, onSwipeRight, 6);
+    /**
+     * This method is handling navigating to the first item when swiping left the last item or navigating to the second item when swiping left the first item
+     */
+    function onSwipeLeft() {
+        if (activeItem === itemsKey.length) {
+            _carousel.current.snapToItem(0);
+        } else {
+            _carousel.current.snapToItem(1);
+        }
+    }
+
+    /**
+     * This method is handling navigating to the last item when swiping right the first item or navigating to the before last item when swiping left the last item
+     */
+    function onSwipeRight() {
+        if (activeItem === 1) {
+            _carousel.current.snapToItem(itemsKey.length - 1);
+        } else {
+            _carousel.current.snapToItem(itemsKey.length - 2);
+        }
+    }
+    /*****************************************************************************/
+    /*****************************************************************************/
+    /*****************************************************************************/
 
     /**
      * this method will calculate the height of the carousel depending on the item height
@@ -42,6 +77,7 @@ export function SnapCarousel({
     const setCarouselHeight = useCallback(event => {
         if (calcCarouselHeight < event?.nativeEvent?.layout?.height) {
             const height = event?.nativeEvent?.layout?.height;
+            setItemHeight(height);
             let offset = layoutCardOffset;
             setCalcCarouselHeight(height + offset);
         }
@@ -84,6 +120,19 @@ export function SnapCarousel({
         let actionToFire = itemsObj[slideIndex]?.action;
         if (actionToFire?.canExecute) {
             actionToFire.execute();
+        }
+
+        // Part of manual infinite loop, navigating to the first item to start the loop again when reaching to the last item
+        // and cancel the current action when swiping manually to any other item
+        if (autoplay && loop && slideIndex + 1 === itemsKey.length) {
+            loopTimeout = setTimeout(() => {
+                _carousel.current.snapToItem(0);
+            }, autoplayInterval);
+        } else if (autoplay && loop) {
+            if (loopTimeout) {
+                clearTimeout(loopTimeout);
+                loopTimeout = null;
+            }
         }
     };
 
@@ -135,41 +184,59 @@ export function SnapCarousel({
     useEffect(() => {
         let widthToSet = carouselWidth === "full" ? windowWidth : validateValue(customWidth, 1, windowWidth);
         setCalcCarouselWidth(widthToSet);
+
+        return () => {
+            if (loopTimeout) {
+                clearTimeout(loopTimeout);
+                loopTimeout = null;
+            }
+        };
     }, []);
 
     return itemsKey?.length && calcCarouselWidth ? (
-        <View style={{ ...styles.mainContainer, width: calcCarouselWidth }}>
-            <Carousel
-                /********************* Data and Action ********************/
-                data={itemsKey}
-                renderItem={_renderItem}
-                firstItem={
-                    firstItem?.status === "available" ? validateValue(firstItem.value, 0, itemsKey.length - 1) : 0
-                }
-                scrollEnabled={scrollEnabled?.status === "available" ? scrollEnabled.value : true}
-                onBeforeSnapToItem={slideIndex => onBeforeSnapToItem(slideIndex)}
-                /************************* Behavior ***********************/
-                layout={layout}
-                autoplay={autoplay}
-                autoplayDelay={validateValue(autoplayDelay, 1000, 300000)}
-                autoplayInterval={validateValue(autoplayInterval, 1000, 300000)}
-                lockScrollWhileSnapping={autoplay ? false : lockScrollWhileSnapping}
-                activeSlideOffset={validateValue(activeSlideOffset, 1, windowWidth / 2)}
-                /****************** Style and animation *******************/
-                layoutCardOffset={validateValue(layoutCardOffset, 0, windowHeight)}
-                inactiveSlideOpacity={validateValue(Number(inactiveSlideOpacity), 0, 1)}
-                inactiveSlideScale={validateValue(Number(inactiveSlideScale), 0, 1)}
-                sliderWidth={calcCarouselWidth}
-                itemWidth={calcCarouselWidth - validateValue(carouselPadding, 0, calcCarouselWidth - 1)}
-                containerCustomStyle={{
-                    height: calcCarouselHeight && layout === "tinder" ? calcCarouselHeight : "auto"
-                }}
-            />
-            {pagination && (
-                <Text
-                    style={{ ...styles.pagination, color: validateColor(paginationColor) }}
-                >{`${activeItem}/${itemsKey.length}`}</Text>
+        <View>
+            {/* creating an overlay to detect swiping left/right to create a manual infinite loop, as the loop from the library itself didn't work, also adding the touch events to the view from  "_renderItem" also didn't work */}
+            {loop && (activeItem === 1 || activeItem === itemsKey?.length) && (
+                <View
+                    onTouchStart={onTouchStart}
+                    onTouchEnd={onTouchEnd}
+                    style={{ ...styles.overlay, height: itemHeight }}
+                ></View>
             )}
+            <View style={{ ...styles.mainContainer, width: calcCarouselWidth }}>
+                <Carousel
+                    ref={_carousel}
+                    /********************* Data and Action ********************/
+                    data={itemsKey}
+                    renderItem={_renderItem}
+                    firstItem={
+                        firstItem?.status === "available" ? validateValue(firstItem.value, 0, itemsKey.length - 1) : 0
+                    }
+                    scrollEnabled={scrollEnabled?.status === "available" ? scrollEnabled.value : true}
+                    onBeforeSnapToItem={slideIndex => onBeforeSnapToItem(slideIndex)}
+                    /************************* Behavior ***********************/
+                    layout={layout}
+                    autoplay={autoplay}
+                    autoplayDelay={validateValue(autoplayDelay, 1000, 300000)}
+                    autoplayInterval={validateValue(autoplayInterval, 1000, 300000)}
+                    lockScrollWhileSnapping={autoplay ? false : lockScrollWhileSnapping}
+                    activeSlideOffset={validateValue(activeSlideOffset, 1, windowWidth / 2)}
+                    /****************** Style and animation *******************/
+                    layoutCardOffset={validateValue(layoutCardOffset, 0, windowHeight)}
+                    inactiveSlideOpacity={validateValue(Number(inactiveSlideOpacity), 0, 1)}
+                    inactiveSlideScale={validateValue(Number(inactiveSlideScale), 0, 1)}
+                    sliderWidth={calcCarouselWidth}
+                    itemWidth={calcCarouselWidth - validateValue(carouselPadding, 0, calcCarouselWidth - 1)}
+                    containerCustomStyle={{
+                        height: calcCarouselHeight && layout === "tinder" ? calcCarouselHeight : "auto"
+                    }}
+                />
+                {pagination && (
+                    <Text
+                        style={{ ...styles.pagination, color: validateColor(paginationColor) }}
+                    >{`${activeItem}/${itemsKey.length}`}</Text>
+                )}
+            </View>
         </View>
     ) : (
         <View></View>
@@ -182,5 +249,10 @@ const styles = StyleSheet.create({
     },
     pagination: {
         marginTop: 5
+    },
+    overlay: {
+        position: "absolute",
+        width: "100%",
+        zIndex: 1
     }
 });
