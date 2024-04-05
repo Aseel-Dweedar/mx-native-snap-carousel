@@ -56,9 +56,9 @@ export function SnapCarousel({
      */
     function onSwipeLeft() {
         if (activeItem === itemsKey.length) {
-            _carousel.current.snapToItem(0);
+            _carousel?.current?.snapToItem(0);
         } else {
-            _carousel.current.snapToItem(1);
+            _carousel?.current?.snapToItem(1);
         }
     }
 
@@ -67,9 +67,9 @@ export function SnapCarousel({
      */
     function onSwipeRight() {
         if (activeItem === 1) {
-            _carousel.current.snapToItem(itemsKey.length - 1);
+            _carousel?.current?.snapToItem(itemsKey.length - 1);
         } else {
-            _carousel.current.snapToItem(itemsKey.length - 2);
+            _carousel?.current?.snapToItem(itemsKey.length - 2);
         }
     }
     /*****************************************************************************/
@@ -131,7 +131,7 @@ export function SnapCarousel({
         // and cancel the current action when swiping manually to any other item
         if (autoplay && loop && slideIndex + 1 === itemsKey.length) {
             loopTimeout = setTimeout(() => {
-                _carousel.current.snapToItem(0);
+                _carousel?.current?.snapToItem(0);
             }, autoplayInterval);
         } else if (autoplay && loop) {
             if (loopTimeout) {
