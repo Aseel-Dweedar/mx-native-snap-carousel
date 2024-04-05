@@ -35,7 +35,12 @@ export function SnapCarousel({
 }) {
     const [itemsObj, setItemsObj] = useState({});
     const [itemsKey, setItemsKey] = useState([]);
+
     const [activeItem, setActiveItem] = useState(1);
+    const [startingItem, setStartingItem] = useState(null);
+
+    const [scroll, setScroll] = useState(true);
+
     const [calcCarouselWidth, setCalcCarouselWidth] = useState(0);
     const [calcCarouselHeight, setCalcCarouselHeight] = useState(0);
     const [itemHeight, setItemHeight] = useState(0);
@@ -168,15 +173,26 @@ export function SnapCarousel({
     }, [data]);
 
     /**
-     * setting the current item to render it in the pagination
+     * setting the current item start the carousel from and to render it in the pagination
      */
     useEffect(() => {
         if (itemsKey.length) {
             let toSetActiveItem =
-                firstItem?.status === "available" ? validateValue(Number(firstItem.value), 0, itemsKey.length - 1) : 0;
+                firstItem?.status === "available"
+                    ? firstItem.value
+                        ? validateValue(Number(firstItem.value), 0, itemsKey.length - 1)
+                        : 0
+                    : 0;
             setActiveItem(toSetActiveItem + 1);
+            setStartingItem(toSetActiveItem);
         }
     }, [itemsKey.length]);
+
+    useEffect(() => {
+        if (scrollEnabled?.status === "available") {
+            setScroll(scrollEnabled.value ? scrollEnabled.value : true);
+        }
+    }, [scrollEnabled]);
 
     /**
      * calculate the carousel width
@@ -184,16 +200,9 @@ export function SnapCarousel({
     useEffect(() => {
         let widthToSet = carouselWidth === "full" ? windowWidth : validateValue(customWidth, 1, windowWidth);
         setCalcCarouselWidth(widthToSet);
-
-        return () => {
-            if (loopTimeout) {
-                clearTimeout(loopTimeout);
-                loopTimeout = null;
-            }
-        };
     }, []);
 
-    return itemsKey?.length && calcCarouselWidth ? (
+    return itemsKey?.length && calcCarouselWidth && startingItem !== null ? (
         <View>
             {/* creating an overlay to detect swiping left/right to create a manual infinite loop, as the loop from the library itself didn't work, also adding the touch events to the view from  "_renderItem" also didn't work */}
             {loop && (activeItem === 1 || activeItem === itemsKey?.length) && (
@@ -209,10 +218,8 @@ export function SnapCarousel({
                     /********************* Data and Action ********************/
                     data={itemsKey}
                     renderItem={_renderItem}
-                    firstItem={
-                        firstItem?.status === "available" ? validateValue(firstItem.value, 0, itemsKey.length - 1) : 0
-                    }
-                    scrollEnabled={scrollEnabled?.status === "available" ? scrollEnabled.value : true}
+                    firstItem={startingItem}
+                    scrollEnabled={scroll}
                     onBeforeSnapToItem={slideIndex => onBeforeSnapToItem(slideIndex)}
                     /************************* Behavior ***********************/
                     layout={layout}
