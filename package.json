@@ -23,7 +23,7 @@
     "url": "https://github.com/Aseel-Dweedar/mx-native-snap-carousel"
   },
   "devDependencies": {
-    "@mendix/pluggable-widgets-tools": "^8.12.0"
+    "@mendix/pluggable-widgets-tools": "10.7.2"
   },
   "dependencies": {
     "react-native-snap-carousel": "^3.9.1"
