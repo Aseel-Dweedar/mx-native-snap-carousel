@@ -1,5 +1,5 @@
 import { createElement, useEffect, useState, useCallback, useRef } from "react";
-import { Dimensions, View, Text, StyleSheet } from "react-native";
+import { Dimensions, View, Text, TouchableWithoutFeedback, StyleSheet } from "react-native";
 import Carousel from "react-native-snap-carousel";
 import { useSwipe } from "./components/useSwipe";
 const { width: windowWidth, height: windowHeight } = Dimensions.get("window");
@@ -7,7 +7,6 @@ const { width: windowWidth, height: windowHeight } = Dimensions.get("window");
 // hex color regex validation, support for 3-character HEX codes (no transparent supported)
 // This means that instead of matching exactly 6 characters, it will match exactly 3 characters, but only 1 or 2 times. Allowing "ABC" and "AABBCC", but not "ABCD"
 const hexColorValidate = /^#([0-9A-F]{3}){1,2}$/i;
-let loopTimeout = null;
 
 export function SnapCarousel({
     dataType,
@@ -36,10 +35,12 @@ export function SnapCarousel({
     const [itemsObj, setItemsObj] = useState({});
     const [itemsKey, setItemsKey] = useState([]);
 
-    const [activeItem, setActiveItem] = useState(1);
-    const [startingItem, setStartingItem] = useState(null);
+    const [activeItem, setActiveItem] = useState(0);
+    const [startingItemIndex, setStartingItemIndex] = useState(null);
 
     const [scroll, setScroll] = useState(true);
+    const [loopTimeout, setLoopTimeout] = useState(null);
+    const [longPressFlag, setLongPressFlag] = useState(false);
 
     const [calcCarouselWidth, setCalcCarouselWidth] = useState(0);
     const [calcCarouselHeight, setCalcCarouselHeight] = useState(0);
@@ -50,27 +51,21 @@ export function SnapCarousel({
     /*****************************************************************************/
     /**************************** Manual Infante Loop ****************************/
     /*****************************************************************************/
-    const { onTouchStart, onTouchEnd } = useSwipe(onSwipeLeft, onSwipeRight, 6);
+    const { onTouchStart, onTouchEnd } = useSwipe(onSwipeLeft, onSwipeRight, 4);
     /**
      * This method is handling navigating to the first item when swiping left the last item or navigating to the second item when swiping left the first item
      */
     function onSwipeLeft() {
-        if (activeItem === itemsKey.length) {
-            _carousel?.current?.snapToItem(0);
-        } else {
-            _carousel?.current?.snapToItem(1);
-        }
+        const idxToSwipe = activeItem === itemsKey.length - 1 ? 0 : activeItem + 1;
+        _carousel?.current?.snapToItem(idxToSwipe);
     }
 
     /**
      * This method is handling navigating to the last item when swiping right the first item or navigating to the before last item when swiping left the last item
      */
     function onSwipeRight() {
-        if (activeItem === 1) {
-            _carousel?.current?.snapToItem(itemsKey.length - 1);
-        } else {
-            _carousel?.current?.snapToItem(itemsKey.length - 2);
-        }
+        const idxToSwipe = activeItem === 0 ? itemsKey.length - 1 : activeItem - 1;
+        _carousel?.current?.snapToItem(idxToSwipe);
     }
     /*****************************************************************************/
     /*****************************************************************************/
@@ -116,12 +111,23 @@ export function SnapCarousel({
     const validateColor = value => (hexColorValidate.test(value) ? value : "#3b4045");
 
     /**
+     * Clear the autoplay timer as it's manually created and destroyed
+     */
+    const clearAutoLoopTimer = () => {
+        if (loopTimeout) {
+            clearTimeout(loopTimeout);
+            setLoopTimeout(null);
+        }
+    };
+
+    /**
      * this function is used to fire the current item action and set the new active item to change the pagination
      *
      * @param {number} slideIndex
      */
     const onBeforeSnapToItem = slideIndex => {
-        setActiveItem(slideIndex + 1);
+        setLongPressFlag(false);
+        setActiveItem(slideIndex);
         let actionToFire = itemsObj[slideIndex]?.action;
         if (actionToFire?.canExecute) {
             actionToFire.execute();
@@ -129,15 +135,14 @@ export function SnapCarousel({
 
         // Part of manual infinite loop, navigating to the first item to start the loop again when reaching to the last item
         // and cancel the current action when swiping manually to any other item
-        if (autoplay && loop && slideIndex + 1 === itemsKey.length) {
-            loopTimeout = setTimeout(() => {
-                _carousel?.current?.snapToItem(0);
-            }, autoplayInterval);
+        if (autoplay && loop && slideIndex === itemsKey.length - 1) {
+            setLoopTimeout(
+                setTimeout(() => {
+                    _carousel?.current?.snapToItem(0);
+                }, autoplayInterval)
+            );
         } else if (autoplay && loop) {
-            if (loopTimeout) {
-                clearTimeout(loopTimeout);
-                loopTimeout = null;
-            }
+            clearAutoLoopTimer();
         }
     };
 
@@ -183,14 +188,14 @@ export function SnapCarousel({
                         ? validateValue(Number(firstItem.value), 0, itemsKey.length - 1)
                         : 0
                     : 0;
-            setActiveItem(toSetActiveItem + 1);
-            setStartingItem(toSetActiveItem);
+            setStartingItemIndex(toSetActiveItem);
+            onBeforeSnapToItem(toSetActiveItem);
         }
     }, [itemsKey.length]);
 
     useEffect(() => {
         if (scrollEnabled?.status === "available") {
-            setScroll(scrollEnabled.value ? scrollEnabled.value : true);
+            setScroll(scrollEnabled.value !== null && scrollEnabled.value !== undefined ? scrollEnabled.value : true);
         }
     }, [scrollEnabled]);
 
@@ -202,15 +207,45 @@ export function SnapCarousel({
         setCalcCarouselWidth(widthToSet);
     }, []);
 
-    return itemsKey?.length && calcCarouselWidth && startingItem !== null ? (
+    return itemsKey?.length && calcCarouselWidth && startingItemIndex !== null ? (
         <View>
             {/* creating an overlay to detect swiping left/right to create a manual infinite loop, as the loop from the library itself didn't work, also adding the touch events to the view from  "_renderItem" also didn't work */}
-            {loop && (activeItem === 1 || activeItem === itemsKey?.length) && (
-                <View
-                    onTouchStart={onTouchStart}
-                    onTouchEnd={onTouchEnd}
-                    style={{ ...styles.overlay, height: itemHeight }}
-                ></View>
+            {loop && scroll && (activeItem === 0 || activeItem === itemsKey.length - 1) && (
+                <TouchableWithoutFeedback
+                    onLongPress={
+                        autoplay
+                            ? () => {
+                                  setLongPressFlag(true);
+                                  _carousel?.current?.stopAutoplay();
+                                  clearAutoLoopTimer();
+                              }
+                            : undefined
+                    }
+                    onPressOut={
+                        longPressFlag
+                            ? () => {
+                                  setLongPressFlag(false);
+                                  _carousel?.current?.startAutoplay();
+                                  setLoopTimeout(
+                                      setTimeout(() => {
+                                          onSwipeLeft();
+                                      }, autoplayInterval)
+                                  );
+                              }
+                            : onTouchEnd
+                    }
+                    onPressIn={onTouchStart}
+                >
+                    <View
+                        style={{
+                            ...styles.overlay,
+                            height: itemHeight,
+                            // same as item width
+                            width: calcCarouselWidth - validateValue(carouselPadding, 0, calcCarouselWidth - 1),
+                            left: carouselPadding / 2
+                        }}
+                    ></View>
+                </TouchableWithoutFeedback>
             )}
             <View style={{ ...styles.mainContainer, width: calcCarouselWidth }}>
                 <Carousel
@@ -218,7 +253,7 @@ export function SnapCarousel({
                     /********************* Data and Action ********************/
                     data={itemsKey}
                     renderItem={_renderItem}
-                    firstItem={startingItem}
+                    firstItem={startingItemIndex}
                     scrollEnabled={scroll}
                     onBeforeSnapToItem={slideIndex => onBeforeSnapToItem(slideIndex)}
                     /************************* Behavior ***********************/
@@ -239,9 +274,9 @@ export function SnapCarousel({
                     }}
                 />
                 {pagination && (
-                    <Text
-                        style={{ ...styles.pagination, color: validateColor(paginationColor) }}
-                    >{`${activeItem}/${itemsKey.length}`}</Text>
+                    <Text style={{ ...styles.pagination, color: validateColor(paginationColor) }}>{`${activeItem + 1}/${
+                        itemsKey.length
+                    }`}</Text>
                 )}
             </View>
         </View>
@@ -259,7 +294,6 @@ const styles = StyleSheet.create({
     },
     overlay: {
         position: "absolute",
-        width: "100%",
         zIndex: 1
     }
 });
