@@ -50,7 +50,7 @@ React Native Snap Carousel widget is a mobile widget for building ***static*** a
     $ npm run build
     <!-- will bundle the project in root level for this project, in a widget folder -->
 
-    <!-- node version 16.17.1 -->
+    <!-- node version 18.16.0 -->
 ```
 
 ***************
